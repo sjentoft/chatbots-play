@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "chatbots-play"
+version = "0.1.0"
+description = ""
+authors = ["sjentoft <susie.jentoft@ssb.no>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+google = "^3.0.0"
+pyyaml = "^6.0.2"
+langchain-experimental = "^0.0.64"
+langchain = "^0.2.14"
+langchain-community = "^0.2.12"
+sentence-transformers = "^3.0.1"
+google-cloud-storage = "^2.18.2"
+datetime = "^5.5"
+s3fs = "^2024.6.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
