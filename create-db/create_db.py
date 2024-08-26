@@ -1,13 +1,12 @@
 # # Create Chroma DB for dapla chatbot
 
 # To restore poetry env:
+# `pip install poetry`
 # `poetry shell` `poetry install`
 
 # To change to poetry interpreter:
 # In terminal: poetry env info --path
 # Copy output to new interpreter: ctr + shift + p > python: select interpreter & paste in
-
-
 
 import yaml #poetry add pyyaml
 import pickle
@@ -27,6 +26,12 @@ from langchain.text_splitter import CharacterTextSplitter
 from google.cloud import storage #poetry add google-cloud-storage
 from langchain_core.document_loaders import BaseLoader
 from langchain.schema import Document
+
+#from .auth import AuthClient
+#os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/path/to/your/service-account-file.json"
+#import boto3
+
+dato = "2024-08-16"
 
 
 def split_html(dir):
@@ -58,6 +63,23 @@ def create_vectorstore(docs, embeddings_model):
     vectorstore = Chroma.from_documents(docs, embedding=embeddings_model)
     return vectorstore
 
+    
+
+class S3DirectoryLoader:
+    def __init__(self, bucket_name, prefix=""):
+        self.bucket_name = bucket_name
+        self.prefix = prefix
+
+    def load(self):
+
+        s3 = s3fs.S3FileSystem(anon=False)  # anon=False means it uses your AWS credentials
+
+        # List all objects with the given prefix
+        objects = s3.ls(f'{self.bucket_name}/{self.prefix}')
+
+        return objects
+
+
 
 class GCSDirectoryLoader(BaseLoader):
     def __init__(self, bucket_name, prefix=""):
@@ -65,7 +87,8 @@ class GCSDirectoryLoader(BaseLoader):
         self.prefix = prefix
 
     def load(self):
-        bucket = storage.Client().get_bucket(self.bucket_name)
+        storage_client = storage.Client()
+        bucket = storage_client().get_bucket(self.bucket_name)
         blobs = bucket.list_blobs(prefix=self.prefix)
         
         documents = []
@@ -83,16 +106,18 @@ if __name__ == "__main__":
     # Set up target folder
     bucket = "sjentoft"
     folder = "db-files/dapla-manual"
-    dato = date.today()
     target_folder = f"{bucket}/{folder}/{dato}"
+
 
     # Set up fs connection
     S3_ENDPOINT_URL = "https://" + os.environ["AWS_S3_ENDPOINT"]
     fs = s3fs.S3FileSystem(client_kwargs={'endpoint_url': S3_ENDPOINT_URL})
 
 
-    dl = GCSDirectoryLoader(bucket, f'{folder}/{dato}')
+    dl = S3DirectoryLoader(bucket, f'{folder}/{dato}')
     docs = dl.load()
+    print(docs[0])
+
     #embed_model = get_embedding_model(configs["embedding_model"])
     #vectorstore = create_vectorstore(docs, embed_model)
 
