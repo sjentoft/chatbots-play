@@ -5,7 +5,9 @@ from transformers import pipeline
 import transformers
 
 
-inference_model = "bardsai/jaskier-7b-dpo-v5.6"
+
+#inference_model = "bardsai/jaskier-7b-dpo-v5.6"
+inference_model='TinyLlama/TinyLlama_v1.1'
 
 # Loads model
 #def get_llm(model = "bardsai/jaskier-7b-dpo-v5.6"):
