@@ -20,8 +20,8 @@ embeddings_folder = 'all-mpnet'
 #inference_model = 'bardsai/jaskier-7b-dpo-v5.6'
 #inference_model='pankajmathur/orca_mini_3b'
 #inference_model= 'TinyLlama/TinyLlama_v1.1'
-inference_model = 'TinyLlama/TinyLlama-1.1B-Chat-v1.0'
-inference_folder = "tinylama"
+#inference_model = 'TinyLlama/TinyLlama-1.1B-Chat-v1.0'
+#inference_folder = "tinylama"
 
 def download_inference_model(base_model_name: str, s3, s3_model_path: str):
     """Downloads chosen huggingface model to cache_dir"""

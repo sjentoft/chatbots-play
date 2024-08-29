@@ -6,8 +6,10 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers import pipeline
 import transformers
 from langchain.chains import ConversationalRetrievalChain
+from langchain.prompts import PromptTemplate
 #from langchain_community.llms import HuggingFacePipeline
 from langchain_huggingface import HuggingFacePipeline
+from langchain.memory import SimpleMemory
 
 import s3fs
 import os
@@ -50,7 +52,7 @@ def get_llm(model_path):
     #qa_pipeline = pipeline("question-answering", model=model, tokenizer=tokenizer, device = 0)
     #llm = HuggingFacePipeline(pipeline=qa_pipeline)
     
-    pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=5000)
+    pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=2048)
     llm = HuggingFacePipeline(pipeline=pipe)
 
     return llm
@@ -84,13 +86,18 @@ if __name__ == "__main__":
         template=template, input_variables=["context", "question"]
     )
 
+    memory = SimpleMemory()
+
+    s = time.time()
     qa_chain = ConversationalRetrievalChain.from_llm(llm, 
-            retriever=retriever, 
-            #memory=memory,
+            retriever=vectorstore.as_retriever(), 
+            memory=memory,
             verbose=True)
     
     answers = []
     for q in qs_vec:
-        response = qa_chain({'question': q})
+        response = qa_chain({'question': q, "chat_history": []})
         answers.append(response["answer"])
     print(answers)
+
+    print(f'Response took: {time.time() - s} seconds')
