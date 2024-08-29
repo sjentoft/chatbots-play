@@ -13,11 +13,15 @@ import s3fs
 from transformers import AutoTokenizer, AutoModel
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
+embeddings_model = 'all-mpnet-base-v2'
+embeddings_folder = 'all-mpnet'
 
 #inference_model = "TheBloke/orca_mini_3B-GGML"
 #inference_model = 'bardsai/jaskier-7b-dpo-v5.6'
 #inference_model='pankajmathur/orca_mini_3b'
-inference_model='TinyLlama/TinyLlama_v1.1'
+#inference_model= 'TinyLlama/TinyLlama_v1.1'
+inference_model = 'TinyLlama/TinyLlama-1.1B-Chat-v1.0'
+inference_folder = "tinylama"
 
 def download_inference_model(base_model_name: str, s3, s3_model_path: str):
     """Downloads chosen huggingface model to cache_dir"""
@@ -45,7 +49,15 @@ def download_inference_model(base_model_name: str, s3, s3_model_path: str):
         with open(local_path, 'rb') as f:
             s3.put(local_path, s3_path)
 
+def download_embeddings_model(embeddings_model: str, s3, s3_embeddings_path:str):
+    temp_path = f'{os.getcwd()}/embeddings_model'
+    embeddings_model = HuggingFaceEmbeddings(model_name = embeddings_model, cache_folder = temp_path)
     
+    for filename in os.listdir(temp_path):
+        local_path = os.path.join(temp_path, filename)
+        s3_path = f'{s3_model_path}/{filename}'
+        with open(local_path, 'rb') as f:
+            s3.put(local_path, s3_path)
 
 if __name__ == "__main__":
 
@@ -54,15 +66,16 @@ if __name__ == "__main__":
     s3 = s3fs.S3FileSystem(client_kwargs={'endpoint_url': S3_ENDPOINT_URL}) # do I need this?
 
     bucket = "sjentoft"
-    s3_model_path = f'{bucket}/inference-models'
+    s3_model_path = f'{bucket}/inference-models/{inference_folder}'
     model_path ="inference_model"
     temp_path = f'{os.getcwd()}/inference_model'
 
-
-    #s3.touch(s3_model_path)
-
-    # download locally - fix later
+    # download inference model locally and move - add in cleanup later
     download_inference_model(inference_model, s3, s3_model_path)
+    
+    # download embeddings model
+    s3_embeddings_path = f'{bucket}/embeddings-models/{embeddings_folder}'
+    download_embeddings_model(embeddings_model, s3, s3_embeddings_path)
 
     print("models saved!")
 
