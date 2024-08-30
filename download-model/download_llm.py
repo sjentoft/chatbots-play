@@ -23,7 +23,10 @@ embeddings_folder = 'all-mpnet'
 #inference_model = 'TinyLlama/TinyLlama-1.1B-Chat-v1.0'
 #inference_folder = "tinylama"
 
-def download_inference_model(base_model_name: str, s3, s3_model_path: str):
+inference_model = 'argilla/CapybaraHermes-2.5-Mistral-7B'
+inference_folder = "mistral"
+
+def download_inference_model(base_model_name: str, s3, s3_model_path: str, inference_folder):
     """Downloads chosen huggingface model to cache_dir"""
     model = AutoTokenizer.from_pretrained(base_model_name)
     tokenizer = AutoModel.from_pretrained(base_model_name)
@@ -31,23 +34,17 @@ def download_inference_model(base_model_name: str, s3, s3_model_path: str):
     # Save the model and tokenizer directly to the S3 bucket
 
     temp_path = f'{os.getcwd()}/inference_model'
-    model.save_pretrained(f'{temp_path}/model')
-    tokenizer.save_pretrained(f'{temp_path}/tokenizer' )
+    model.save_pretrained(f'{temp_path}/{inference_folder}')
+    tokenizer.save_pretrained(f'{temp_path}/{inference_folder}' )
 
     # Upload saved files to S3
-    for filename in os.listdir(f'{temp_path}/model'):
-        local_path = os.path.join(f'{temp_path}/model', filename)
+    for filename in os.listdir(f'{temp_path}/{inference_folder}'):
+        local_path = os.path.join(f'{temp_path}/{inference_folder}', filename)
         s3_path = f'{s3_model_path}/{filename}'
         print(s3_path)
         with open(local_path, 'rb') as f:
             s3.put(local_path, s3_path) 
 
-    for filename in os.listdir(f'{temp_path}/tokenizer'):
-        local_path = os.path.join(f'{temp_path}/tokenizer', filename)
-        s3_path = f'{s3_model_path}/{filename}'
-        print(s3_path)
-        with open(local_path, 'rb') as f:
-            s3.put(local_path, s3_path)
 
 def download_embeddings_model(embeddings_model: str, s3, s3_embeddings_path:str):
     temp_path = f'{os.getcwd()}/embeddings_model'
@@ -71,11 +68,11 @@ if __name__ == "__main__":
     temp_path = f'{os.getcwd()}/inference_model'
 
     # download inference model locally and move - add in cleanup later
-    download_inference_model(inference_model, s3, s3_model_path)
+    download_inference_model(inference_model, s3, s3_model_path, inference_folder)
     
     # download embeddings model
-    s3_embeddings_path = f'{bucket}/embeddings-models/{embeddings_folder}'
-    download_embeddings_model(embeddings_model, s3, s3_embeddings_path)
+    #s3_embeddings_path = f'{bucket}/embeddings-models/{embeddings_folder}'
+    #download_embeddings_model(embeddings_model, s3, s3_embeddings_path)
 
     print("models saved!")
 
