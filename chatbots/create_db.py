@@ -21,7 +21,7 @@ from langchain_experimental.text_splitter import SemanticChunker
 from langchain_community.document_loaders import S3DirectoryLoader
 from langchain_community.document_loaders import DirectoryLoader
 from langchain_community.vectorstores import Chroma
-from langchain.text_splitter import CharacterTextSplitter
+from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTextSplitter
 
 from google.cloud import storage #poetry add google-cloud-storage
 from langchain_core.document_loaders import BaseLoader
@@ -31,27 +31,24 @@ from bs4 import BeautifulSoup
 
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 
-#from .auth import AuthClient
-#os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/path/to/your/service-account-file.json"
-#import boto3
-
-#print(os.environ["AWS_ACCESS_KEY_ID"])
-#print(os.environ["AWS_SECRET_ACCESS_KEY"])
-#print(os.getenv('AWS_SESSION_TOKEN')) 
-
 
 dato = "2024-08-16"
 
+def remove_single_word_lines(text):
+    # Split the text into lines
+    lines = text.splitlines()
 
-def split_html(bucket, prefix):
+    # Filter out lines that contain only one word
+    filtered_lines = [line for line in lines if len(line.split()) > 1]
+
+    # Join the filtered lines back into a single string
+    return '\n'.join(filtered_lines)
+
+
+def split_html(bucket, prefix, chunk_size = 512):
     S3_ENDPOINT_URL = "https://" + os.environ["AWS_S3_ENDPOINT"]
     txt_loader = S3DirectoryLoader(bucket, prefix)
-        # glob="**/*.html", 
-        #endpoint_url = S3_ENDPOINT_URL )
-    
-    #txt_loader.load()
-    #print(txt_loader)
-    #loaders = [txt_loader]
+
     documents = []
 
     try:
@@ -63,6 +60,12 @@ def split_html(bucket, prefix):
             # Parse HTML and extract text
             soup = BeautifulSoup(text_content, 'html.parser')
             clean_text = soup.get_text(separator='\n', strip=True)
+
+            # Remove single-word lines
+            clean_text = remove_single_word_lines(clean_text)
+
+            # Normalize whitespace
+            clean_text = ' '.join(clean_text.split())
             
             # Wrap the cleaned text in a Document object
             documents.append(Document(page_content=clean_text))
@@ -72,7 +75,7 @@ def split_html(bucket, prefix):
         return []
 
     # Initialize the text splitter
-    text_splitter = CharacterTextSplitter(chunk_size=512, chunk_overlap=0)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=0)
     
     # Split the documents into chunks
     chunks = text_splitter.split_documents(documents)
@@ -132,52 +135,10 @@ if __name__ == "__main__":
     # Set up target folder
     bucket = "sjentoft"
     prefix = f"db-files/dapla-manual/{dato}"
-    #target_folder = f"{bucket}/{folder}/{dato}"
 
-    # Set up fs connection
-    #S3_ENDPOINT_URL = "https://" + os.environ["AWS_S3_ENDPOINT"]
-    #fs = s3fs.S3FileSystem(client_kwargs={'endpoint_url': S3_ENDPOINT_URL})
-
-    # 
     docs = split_html(bucket, prefix)
     print("docs split")
     # print(docs[0])
-    # Test created document loader
-    #dl = S3DirectoryLoader(bucket, f'{folder}/{dato}')
-    #docs = dl.load()
-    #print(docs[0])
-    # Vectore Store
-    #embed_model = get_embedding_model(configs["embedding_model"])
+
     vectorstore = create_vectorstore(docs)
     print("vectore store done")
-    #embeddings = MyEmbeddings()
-    #splitter = SemanticChunker(embeddings)
-
-
-""" Old below
-from google.cloud import storage
-from langchain_core.document_loaders import BaseLoader
-from langchain.schema import Document
-
-#fs = dp.FileClient()
-
-#from google.cloud import storage
-
-#bucket = "gs://ssb-play-chatbot-data-produkt-prod"
-#folder = "db-files/docs"
-
-fs = dp.FileClient()
-fs.get_versions(bucket, folder)
-
-# Usage example
-bucket = "gs://ssb-play-chatbot-data-produkt-prod"
-folder = f"db-files/docs"
-
-loader = GCSDirectoryLoader(bucket_name=bucket, prefix=folder)
-documents = loader.load()
-
-for doc in documents:
-    print(doc.metadata)
-    print(doc.text)
-
-"""
