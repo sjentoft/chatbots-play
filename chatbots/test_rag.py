@@ -52,8 +52,9 @@ def get_llm_new(model_path, local_path, need_token=False):
         model = model_path,
         max_model_len=8000, 
         #gpu_memory_utilization=0.5,
+        max_num_seqs=2,
         trust_remote_code=True,
-        #cache_dir = local_path
+        cache_dir = local_path,
         download_dir=local_path
     )
 
@@ -81,16 +82,21 @@ def get_prompt():
 if __name__ == "__main__":
     # Set up vectorstore
     s = time.time()
-    docs = create_db.split_html(bucket, prefix)
+    docs = create_db.split_html(bucket, prefix, chunk_size = 256)
     vectorstore = create_db.create_vectorstore(docs)
     t = time.time() - s
     print(f"vectore store done in {t} seconds")
 
     s = time.time()
-    model_path = "mistralai/Mistral-7B-v0.1"
-    model_path = "openai-community/gpt2"
-    local_path = "inference_model/gpt2"
-    llm = get_llm_new(model_path, local_path)
+    #model_path = "mistralai/Mistral-7B-v0.1"
+    #local_path = "inference_model/mistral"
+
+    model_path = 'argilla/CapybaraHermes-2.5-Mistral-7B'
+    local_path = "inference_model/mistral"
+    #model_path = "openai-community/gpt2"
+    #local_path = "inference_model/gpt2"
+
+    llm = get_llm_new(model_path, local_path, True)
     t = time.time() - s
     print(f"llm loaded in {t} seconds")
 
@@ -100,7 +106,7 @@ if __name__ == "__main__":
     prompt = get_prompt()
 
     rag_chain = (
-        {"context": vectorstore.as_retriver(), "question": RunnablePassthrough()}
+        {"context": vectorstore.as_retriever(), "question": RunnablePassthrough()}
         |prompt
         |llm
         |StrOutputParser()
