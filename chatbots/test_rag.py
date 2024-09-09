@@ -1,7 +1,6 @@
 # Simple case for testing a qa RAG bot
 
-# From Benedikt
-from vllm import LLM
+#from vllm import LLM
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -9,109 +8,55 @@ from langchain.memory import ConversationSummaryBufferMemory
 from langchain.prompts import PromptTemplate
 from langchain_community.llms import VLLM
 
-# Import packges
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers import pipeline
 import transformers
 from langchain.chains import ConversationalRetrievalChain
 from langchain.prompts import PromptTemplate
 #from langchain_community.llms import HuggingFacePipeline
-from langchain_huggingface import HuggingFacePipeline
-from langchain.memory import SimpleMemory
+#from langchain_huggingface import HuggingFacePipeline
+#from langchain.memory import SimpleMemory
+#import torch
 
 import s3fs
 import os
 import time
 
 import create_db
+import os
 
 # Set up parameters
-inference_model='TinyLlama/TinyLlama_v1.1'
 dato = "2024-08-16" # For dp manual scraping version
 bucket = "sjentoft"
 prefix = f"db-files/dapla-manual/{dato}"
-model_path = "inference-models/mistral"
-local_path = "inference_model/mistral"
 
-# Get model from S3 bucket
-def get_llm(model_path):
+
+def set_key():
+    # Check if the HUGGINGFACE_API_KEY is set
+    api_key = os.getenv("HUGGINGFACE_API_KEY")
+
+    if api_key:
+            print("HUGGINGFACE_API_KEY is set.")
+    else:
+        os.environ["HUGGINGFACE_API_KEY"] = input("Enter your huggingface token: ")
+
+
+def get_llm_new(model_path, local_path, need_token=False):
     """
     Function to get model from S3 bucket ond save locally for reading in.
     """
-    # S3 bucket and file paths
-    s3_bucket = 'sjentoft'
-
-    # Initialize s3fs
-    S3_ENDPOINT_URL = "https://" + os.environ["AWS_S3_ENDPOINT"]
-    fs = s3fs.S3FileSystem(client_kwargs={'endpoint_url': S3_ENDPOINT_URL})
-
-    local_dir = f'{os.getcwd()}/tmp/model'
-
-    # Create the local directory if it doesn't exist
-    if not os.path.exists(local_dir):
-        os.makedirs(local_dir)
-
-        # Copy the model and tokenizer from S3 to the local directory
-        fs.get(f'{s3_bucket}/{model_path}', local_dir, recursive=True)
-
-    # Load the model and tokenizer from the local directory
-    model = AutoModelForCausalLM.from_pretrained(f'{local_dir}/{model_path}')
-    tokenizer = AutoTokenizer.from_pretrained(f'{local_dir}/{model_path}')
-
-    #qa_pipeline = pipeline("question-answering", model=model, tokenizer=tokenizer, device = 0)
-    #llm = HuggingFacePipeline(pipeline=qa_pipeline)
-    
-    pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=2048)
-    llm = HuggingFacePipeline(pipeline=pipe)
-
-    return llm
-
-def get_llm_new(model_path, local_path):
-    """
-    Function to get model from S3 bucket ond save locally for reading in.
-    """
-    # S3 bucket and file paths
-    s3_bucket = 'sjentoft'
-
-    # Initialize s3fs
-    S3_ENDPOINT_URL = "https://" + os.environ["AWS_S3_ENDPOINT"]
-    fs = s3fs.S3FileSystem(client_kwargs={'endpoint_url': S3_ENDPOINT_URL})
-
-    local_dir = f'/home/onyxia/work/chatbots-play/{local_path}'
-
-    # Create the local directory if it doesn't exist
-    if not os.path.exists(local_dir):
-        os.makedirs(local_dir)
-
-        # Copy the model and tokenizer from S3 to the local directory
-        fs.get(
-            f'{s3_bucket}/{model_path}',
-            '/home/onyxia/work/chatbots-play/inference_model', 
-            recursive=True)
-        print(f"Model copied to local folder: {local_dir}")
-
-    print(f"Loading model from: {local_dir}")
+    if need_token:
+        set_key() # in case model requires token
 
     llm = VLLM(
-        model=local_dir, 
+        model = model_path,
         max_model_len=8000, 
-        gpu_memory_utilization=0.9,
-        #tensor_parallel_size=1,
+        #gpu_memory_utilization=0.5,
         trust_remote_code=True,
-        #enforce_eager=True
-        #download_dir='models'
+        #cache_dir = local_path
+        download_dir=local_path
     )
-    # Load the model and tokenizer from the local directory
-    model = AutoModelForCausalLM.from_pretrained(f'{local_dir}/{model_path}')
-    tokenizer = AutoTokenizer.from_pretrained(f'{local_dir}/{model_path}')
 
-    #qa_pipeline = pipeline("question-answering", model=model, tokenizer=tokenizer, device = 0)
-    #llm = HuggingFacePipeline(pipeline=qa_pipeline)
-    
-    pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=2048)
-    llm = HuggingFacePipeline(pipeline=pipe)
-
-    return llm
     return llm
 
 def get_template():
@@ -142,6 +87,9 @@ if __name__ == "__main__":
     print(f"vectore store done in {t} seconds")
 
     s = time.time()
+    model_path = "mistralai/Mistral-7B-v0.1"
+    model_path = "openai-community/gpt2"
+    local_path = "inference_model/gpt2"
     llm = get_llm_new(model_path, local_path)
     t = time.time() - s
     print(f"llm loaded in {t} seconds")
@@ -152,7 +100,7 @@ if __name__ == "__main__":
     prompt = get_prompt()
 
     rag_chain = (
-        {"context": vectorstore.as_retriver(), "question":RunnablePassthrough()}
+        {"context": vectorstore.as_retriver(), "question": RunnablePassthrough()}
         |prompt
         |llm
         |StrOutputParser()
