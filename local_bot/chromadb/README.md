@@ -1,0 +1,1 @@
+Folder for chroma db local storage
