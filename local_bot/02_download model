@@ -1,0 +1,9 @@
+# Download model
+
+# in terminal: 
+# huggingface-cli login 
+# put in token
+# huggingface-cli download mistralai/Mistral-7B-Instruct-v0.3
+# huggingface-cli download TheBloke/orca_mini_v3_7B-GPTQ
+
+# Check where the cache is: echo $HF_HOME
